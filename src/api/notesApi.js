@@ -1,5 +1,26 @@
+/*
+=========================================================
+NOTE FLOW API
+Production + Local Development
+=========================================================
+*/
+
+/*
+  When running locally:
+  http://localhost:5000
+
+  When deployed:
+  VITE_API_URL should contain your Vercel backend URL.
+
+  IMPORTANT:
+  In Vercel, add:
+  VITE_API_URL = https://noteflow-api-umber.vercel.app
+*/
+
 const API_URL =
+  import.meta.env.VITE_API_URL ||
   "http://localhost:5000";
+
 
 /* =========================================================
    RESPONSE HANDLER
@@ -9,15 +30,16 @@ async function handleResponse(
   response,
   defaultMessage
 ) {
-  let result;
+  let result = null;
 
   try {
-    result =
-      await response.json();
+    result = await response.json();
   } catch {
-    throw new Error(
-      defaultMessage
-    );
+    if (!response.ok) {
+      throw new Error(defaultMessage);
+    }
+
+    return null;
   }
 
   if (!response.ok) {
@@ -28,41 +50,77 @@ async function handleResponse(
     );
   }
 
-  return (
-    result?.data ||
-    result?.note ||
-    result?.notes ||
-    result?.categories ||
-    result
-  );
+  /*
+    Different backend endpoints may return:
+
+    { data: ... }
+    { note: ... }
+    { notes: ... }
+    { categories: ... }
+
+    We support all of them.
+  */
+
+  if (result?.data !== undefined) {
+    return result.data;
+  }
+
+  if (result?.note !== undefined) {
+    return result.note;
+  }
+
+  if (result?.notes !== undefined) {
+    return result.notes;
+  }
+
+  if (result?.categories !== undefined) {
+    return result.categories;
+  }
+
+  return result;
 }
+
+
+/* =========================================================
+   AUTH HEADER
+========================================================= */
+
+function getHeaders(accessToken) {
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  if (accessToken) {
+    headers.Authorization =
+      `Bearer ${accessToken}`;
+  }
+
+  return headers;
+}
+
 
 /* =========================================================
    NOTES
 ========================================================= */
 
+
 /*
-   GET ALL NOTES
+=========================================================
+GET ALL NOTES
+=========================================================
 */
 
 export async function getNotes(
   accessToken
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes`,
-      {
-        method: "GET",
-
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
+  const response = await fetch(
+    `${API_URL}/api/notes`,
+    {
+      method: "GET",
+      headers:
+        getHeaders(accessToken),
+    }
+  );
 
   return handleResponse(
     response,
@@ -70,29 +128,25 @@ export async function getNotes(
   );
 }
 
+
 /*
-   GET ONE NOTE
+=========================================================
+GET ONE NOTE
+=========================================================
 */
 
 export async function getNote(
   accessToken,
   noteId
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes/${noteId}`,
-      {
-        method: "GET",
-
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
+  const response = await fetch(
+    `${API_URL}/api/notes/${noteId}`,
+    {
+      method: "GET",
+      headers:
+        getHeaders(accessToken),
+    }
+  );
 
   return handleResponse(
     response,
@@ -100,33 +154,28 @@ export async function getNote(
   );
 }
 
+
 /*
-   CREATE NOTE
+=========================================================
+CREATE NOTE
+=========================================================
 */
 
 export async function createNote(
   accessToken,
   note
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes`,
-      {
-        method: "POST",
+  const response = await fetch(
+    `${API_URL}/api/notes`,
+    {
+      method: "POST",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+      headers:
+        getHeaders(accessToken),
 
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify(
-          note
-        ),
-      }
-    );
+      body: JSON.stringify(note),
+    }
+  );
 
   return handleResponse(
     response,
@@ -134,14 +183,17 @@ export async function createNote(
   );
 }
 
-/*
-   UPDATE NOTE
 
-   Used for:
-   - Editing
-   - Favorite
-   - Pin
-   - Restore
+/*
+=========================================================
+UPDATE NOTE
+
+Used for:
+- Editing
+- Favorite
+- Pin
+- Restore
+=========================================================
 */
 
 export async function updateNote(
@@ -149,25 +201,19 @@ export async function updateNote(
   noteId,
   updates
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes/${noteId}`,
-      {
-        method: "PUT",
+  const response = await fetch(
+    `${API_URL}/api/notes/${noteId}`,
+    {
+      method: "PUT",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+      headers:
+        getHeaders(accessToken),
 
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify(
-          updates
-        ),
-      }
-    );
+      body: JSON.stringify(
+        updates
+      ),
+    }
+  );
 
   return handleResponse(
     response,
@@ -175,29 +221,26 @@ export async function updateNote(
   );
 }
 
+
 /*
-   MOVE NOTE TO TRASH
+=========================================================
+MOVE NOTE TO TRASH
+=========================================================
 */
 
 export async function deleteNote(
   accessToken,
   noteId
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes/${noteId}`,
-      {
-        method: "DELETE",
+  const response = await fetch(
+    `${API_URL}/api/notes/${noteId}`,
+    {
+      method: "DELETE",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
+      headers:
+        getHeaders(accessToken),
+    }
+  );
 
   return handleResponse(
     response,
@@ -205,29 +248,26 @@ export async function deleteNote(
   );
 }
 
+
 /*
-   PERMANENTLY DELETE NOTE
+=========================================================
+PERMANENTLY DELETE NOTE
+=========================================================
 */
 
 export async function permanentlyDeleteNote(
   accessToken,
   noteId
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes/${noteId}/permanent`,
-      {
-        method: "DELETE",
+  const response = await fetch(
+    `${API_URL}/api/notes/${noteId}/permanent`,
+    {
+      method: "DELETE",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
+      headers:
+        getHeaders(accessToken),
+    }
+  );
 
   return handleResponse(
     response,
@@ -235,33 +275,30 @@ export async function permanentlyDeleteNote(
   );
 }
 
+
 /*
-   RESTORE NOTE
+=========================================================
+RESTORE NOTE
+=========================================================
 */
 
 export async function restoreNote(
   accessToken,
   noteId
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/notes/${noteId}`,
-      {
-        method: "PUT",
+  const response = await fetch(
+    `${API_URL}/api/notes/${noteId}`,
+    {
+      method: "PUT",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+      headers:
+        getHeaders(accessToken),
 
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify({
-          deleted: false,
-        }),
-      }
-    );
+      body: JSON.stringify({
+        deleted: false,
+      }),
+    }
+  );
 
   return handleResponse(
     response,
@@ -269,32 +306,30 @@ export async function restoreNote(
   );
 }
 
+
 /* =========================================================
    CATEGORIES
 ========================================================= */
 
+
 /*
-   GET ALL CATEGORIES
+=========================================================
+GET ALL CATEGORIES
+=========================================================
 */
 
 export async function getCategories(
   accessToken
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/categories`,
-      {
-        method: "GET",
+  const response = await fetch(
+    `${API_URL}/api/categories`,
+    {
+      method: "GET",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
+      headers:
+        getHeaders(accessToken),
+    }
+  );
 
   return handleResponse(
     response,
@@ -302,33 +337,30 @@ export async function getCategories(
   );
 }
 
+
 /*
-   CREATE CATEGORY
+=========================================================
+CREATE CATEGORY
+=========================================================
 */
 
 export async function createCategory(
   accessToken,
   category
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/categories`,
-      {
-        method: "POST",
+  const response = await fetch(
+    `${API_URL}/api/categories`,
+    {
+      method: "POST",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+      headers:
+        getHeaders(accessToken),
 
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify(
-          category
-        ),
-      }
-    );
+      body: JSON.stringify(
+        category
+      ),
+    }
+  );
 
   return handleResponse(
     response,
@@ -336,8 +368,11 @@ export async function createCategory(
   );
 }
 
+
 /*
-   UPDATE CATEGORY
+=========================================================
+UPDATE CATEGORY
+=========================================================
 */
 
 export async function updateCategory(
@@ -345,25 +380,19 @@ export async function updateCategory(
   categoryId,
   updates
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/categories/${categoryId}`,
-      {
-        method: "PUT",
+  const response = await fetch(
+    `${API_URL}/api/categories/${categoryId}`,
+    {
+      method: "PUT",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
+      headers:
+        getHeaders(accessToken),
 
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify(
-          updates
-        ),
-      }
-    );
+      body: JSON.stringify(
+        updates
+      ),
+    }
+  );
 
   return handleResponse(
     response,
@@ -371,32 +400,38 @@ export async function updateCategory(
   );
 }
 
+
 /*
-   DELETE CATEGORY
+=========================================================
+DELETE CATEGORY
+=========================================================
 */
 
 export async function deleteCategory(
   accessToken,
   categoryId
 ) {
-  const response =
-    await fetch(
-      `${API_URL}/api/categories/${categoryId}`,
-      {
-        method: "DELETE",
+  const response = await fetch(
+    `${API_URL}/api/categories/${categoryId}`,
+    {
+      method: "DELETE",
 
-        headers: {
-          Authorization:
-            `Bearer ${accessToken}`,
-
-          "Content-Type":
-            "application/json",
-        },
-      }
-    );
+      headers:
+        getHeaders(accessToken),
+    }
+  );
 
   return handleResponse(
     response,
     "Failed to delete category."
   );
+}
+
+
+/* =========================================================
+   DEBUG HELPER
+========================================================= */
+
+export function getApiUrl() {
+  return API_URL;
 }

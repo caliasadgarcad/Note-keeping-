@@ -40,7 +40,13 @@ if (!SUPABASE_PUBLISHABLE_KEY) {
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+     origin: [
+      "http://localhost:5173",
+      "https://note-keeping-kohl.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  
   })
 );
 
